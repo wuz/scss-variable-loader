@@ -1,6 +1,6 @@
 # SCSS variable loader from webpack
 
-[![npm version](https://img.shields.io/npm/v/scss-variable-loader))(https://npmjs.org/package/scss-variable-loader)
+[![npm version](https://img.shields.io/npm/v/scss-variable-loader)](https://npmjs.org/package/scss-variable-loader)
 
 > Parses your SCSS variables and returns them as an object. Supports SCSS functions like lighten, darken, mix, etc.
 
