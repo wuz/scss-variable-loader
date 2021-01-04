@@ -1,24 +1,21 @@
 import stripComments from "strip-json-comments";
+import { parse, jsonify } from "sast";
 
-const VARIABLE_REGEX = /\$(.+):\s+(.+);?/;
+const VARIABLE_REGEX = /\$(.+):\s+(.+);/;
 
 const getVariables = (content) => {
   const variables = [];
 
-  stripComments(content)
-    .split("\n")
-    .forEach((line) => {
-      const variable = VARIABLE_REGEX.exec(line);
-      if (!variable) return;
+  const tree = parse(stripComments(content), { syntax: "scss" });
 
-      const name = variable[1].trim();
-      const value = variable[2].replace(/!default|!important/g, "").trim();
+  tree.children.forEach((node) => {
+    if (node.type !== "declaration") return;
+    const { name, value } = jsonify(node);
+    if (!name || !value) return;
+    variables.push({ name, value });
+  });
 
-      variables.push({ name, value });
-      return;
-    });
-
-  return variables;
+  return { variables, tree, content };
 };
 
 export default getVariables;

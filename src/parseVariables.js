@@ -1,39 +1,50 @@
 import sass from "sass";
 import camelCase from "lodash.camelcase";
 
-const constructSassString = (variables) => {
-  const asVariables = variables
-    .map((variable) => `$${variable.name}: ${variable.value};`)
-    .join("\n");
-  const asClasses = variables
-    .map((variable) => `.${variable.name} { value: ${variable.value} }`)
-    .join("\n");
+const VARIABLE_MATCHER = /\.parsedValue\{value:(.*)\}/;
 
-  return `${asVariables}\n${asClasses}`;
-};
-
-const parseVariables = (variables, opts = {}) => {
-  const result = sass
+const parseValue = (value, content) => {
+  const parsed = sass
     .renderSync({
-      data: constructSassString(variables),
+      data: `
+  ${content}
+  .parsedValue {
+value: ${value};
+  }
+  `,
       outputStyle: "compressed",
     })
-    .css.toString()
-    .replace(/}/g, " }\n")
-    .replace(/{/g, " { ");
+    .css.toString();
+  const [, parsedValue] = VARIABLE_MATCHER.exec(parsed);
+  return parsedValue;
+};
 
-  const { preserveVariableNames } = opts;
-
-  const parsedVariables = result.split(/\n/).reduce((obj, line) => {
-    if (!line || line.length === 0) return obj;
-    const [, name, value] = /\.(.+) { value:(.+) }/.exec(line);
-    if (preserveVariableNames) {
-      return { ...obj, [name]: value };
-    }
-    return { ...obj, [camelCase(name)]: value };
-  }, {});
-
-  return parsedVariables;
+const parseVariables = ({ variables, tree, content }, opts = {}) => {
+  return variables
+    .map((variable) => {
+      const { name, value } = variable;
+      if (typeof value === "object") {
+        return {
+          [opts.preserveVariableNames ? name : camelCase(name)]: Object.entries(
+            value
+          ).reduce((acc, [valueName, valueValue]) => {
+            return {
+              ...acc,
+              [opts.preserveVariableNames
+                ? valueName
+                : camelCase(valueName)]: parseValue(valueValue, content),
+            };
+          }, {}),
+        };
+      }
+      return {
+        [opts.preserveVariableNames ? name : camelCase(name)]: parseValue(
+          value,
+          content
+        ),
+      };
+    })
+    .reduce((obj, value) => ({ ...obj, ...value }), {});
 };
 
 export default parseVariables;
