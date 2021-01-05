@@ -6,6 +6,7 @@ import camelCase from "lodash.camelcase";
 const VARIABLE_MATCHER = /\.parsedValue\{value:(.*)\}/;
 
 const parseValue = (value, content, basePath, includePaths = []) => {
+  let currentPath = basePath;
   const parsed = sass
     .renderSync({
       data: `
@@ -17,9 +18,17 @@ value: ${value};
       includePaths,
       importer: [
         (url, prev) => {
-          // handle imported files from basePath
-          if (!basePath) return null;
-          let filePath = `${path.resolve(basePath, url)}.scss`;
+          // handle imported files with basePath
+          if (!currentPath) return null;
+          let filePath;
+          if (prev === "stdin") {
+            currentPath = basePath;
+            filePath = `${path.resolve(currentPath, url)}.scss`;
+            currentPath = path.dirname(filePath);
+          } else {
+            filePath = `${path.resolve(currentPath, url)}.scss`;
+            currentPath = path.dirname(filePath);
+          }
           const stats = fs.lstatSync(filePath);
           if (stats.isFile()) {
             const contents = fs.readFileSync(filePath, "utf-8");
