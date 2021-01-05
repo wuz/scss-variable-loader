@@ -97,6 +97,31 @@ $x: $one;
   });
 });
 
+describe("with import", function () {
+  const sass = `@import 'import/imported'; $test: $one;`;
+  const extracted = getVariables(sass);
+
+  describe("getVariables()", function () {
+    it("should return an array with 1 items", function () {
+      expect(Array.isArray(extracted.variables)).toBe(true);
+      expect(extracted.variables).toHaveLength(1);
+    });
+  });
+
+  describe("parseVariables()", function () {
+    it("should return an object with the key one", function () {
+      const result = parseVariables(extracted, { basePath: "test/" });
+      expect(typeof result).toBe("object");
+      expect(result).toHaveProperty("test");
+    });
+    it("should not return an object with the key y", function () {
+      const result = parseVariables(extracted, { basePath: "test/" });
+      expect(typeof result).toBe("object");
+      expect(result).not.toHaveProperty("y");
+    });
+  });
+});
+
 describe("empty file", function () {
   describe("getVariables()", function () {
     function testFn() {

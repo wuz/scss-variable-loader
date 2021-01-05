@@ -1,9 +1,11 @@
 import sass from "sass";
+import fs from "fs";
+import path from "path";
 import camelCase from "lodash.camelcase";
 
 const VARIABLE_MATCHER = /\.parsedValue\{value:(.*)\}/;
 
-const parseValue = (value, content) => {
+const parseValue = (value, content, basePath, includePaths = []) => {
   const parsed = sass
     .renderSync({
       data: `
@@ -12,6 +14,22 @@ const parseValue = (value, content) => {
 value: ${value};
   }
   `,
+      includePaths,
+      importer: [
+        (url, prev) => {
+          // handle imported files from basePath
+          if (!basePath) return null;
+          let filePath = `${path.resolve(basePath, url)}.scss`;
+          const stats = fs.lstatSync(filePath);
+          if (stats.isFile()) {
+            const contents = fs.readFileSync(filePath, "utf-8");
+            return {
+              contents,
+            };
+          }
+          return null;
+        },
+      ],
       outputStyle: "compressed",
     })
     .css.toString();
@@ -20,27 +38,35 @@ value: ${value};
 };
 
 const parseVariables = ({ variables, tree, content }, opts = {}) => {
+  const { includePaths, preserveVariableNames, basePath } = opts;
   return variables
     .map((variable) => {
       const { name, value } = variable;
       if (typeof value === "object") {
         return {
-          [opts.preserveVariableNames ? name : camelCase(name)]: Object.entries(
+          [preserveVariableNames ? name : camelCase(name)]: Object.entries(
             value
           ).reduce((acc, [valueName, valueValue]) => {
             return {
               ...acc,
-              [opts.preserveVariableNames
+              [preserveVariableNames
                 ? valueName
-                : camelCase(valueName)]: parseValue(valueValue, content),
+                : camelCase(valueName)]: parseValue(
+                valueValue,
+                content,
+                basePath,
+                includePaths
+              ),
             };
           }, {}),
         };
       }
       return {
-        [opts.preserveVariableNames ? name : camelCase(name)]: parseValue(
+        [preserveVariableNames ? name : camelCase(name)]: parseValue(
           value,
-          content
+          content,
+          basePath,
+          includePaths
         ),
       };
     })
