@@ -1,21 +1,38 @@
 import stripComments from "strip-json-comments";
-import { parse, jsonify } from "sast";
+import sass from "sass";
+import { parse } from "gonzales-pe";
 
 const VARIABLE_REGEX = /\$(.+):\s+(.+);/;
 
-const getVariables = (content) => {
+const getVariables = (content, opts = {}) => {
   const variables = [];
 
-  const tree = parse(stripComments(content), { syntax: "scss" });
+  console.log(content, opts);
 
-  tree.children.forEach((node) => {
-    if (node.type !== "declaration") return;
-    const { name, value } = jsonify(node);
-    if (!name || !value) return;
-    variables.push({ name, value });
+  const tree = parse(content, { syntax: "scss" });
+
+  const rendered = sass.renderSync({ data: content });
+
+  console.log(rendered);
+
+  tree.eachFor((child) => {
+    if (child.type === "atrule") {
+      const atkeyword = child.get(0);
+      if (atkeyword.first("ident").content === "import") {
+        const file = child.first("string");
+        console.log(file);
+      }
+    }
   });
 
-  return { variables, tree, content };
+  // tree.children.forEach((node) => {
+  //   if (node.type !== "declaration") return;
+  //   const { name, value } = node.toJson();
+  //   if (!name || !value) return;
+  //   variables.push({ name, value });
+  // });
+
+  // return { variables, tree, content };
 };
 
 export default getVariables;

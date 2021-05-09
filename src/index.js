@@ -2,7 +2,7 @@ import loaderUtils from "loader-utils";
 import getVariables from "./getVariables";
 import parseVariables from "./parseVariables";
 
-const sassVariableLoader = function (content) {
+const scssVariableLoader = function (content) {
   this.cacheable();
   const opts = {
     ...loaderUtils.getOptions(this),
@@ -11,4 +11,4 @@ const sassVariableLoader = function (content) {
   return `module.exports = ${JSON.stringify(variables)}`;
 };
 
-module.exports = sassVariableLoader;
+module.exports = scssVariableLoader;
